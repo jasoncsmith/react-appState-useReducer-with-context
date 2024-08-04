@@ -1,152 +1,177 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { faker } from '@faker-js/faker'
 
-import { useAppStateContext, AppStateProvider, Action, ACTION_TYPES } from './hooks/useAppContext'
+import { useGridApiContext, GridApiProvider, Employee, ACTION_TYPES, SortTypes } from './hooks/useAppContext'
 
-function changeUser() {
-  return {
-    name: faker.person.fullName(),
-    email: `${faker.company.buzzAdjective().replace(/\s/g, '_').toLowerCase()}@${faker.company
-      .name()
-      .replace(/\s/g, '_')
-      .toLowerCase()}.com`,
+const getEmployees = () => {
+  const arr: Employee[] = []
+  for (let i = 0; i < 150; i++) {
+    arr.push({
+      name: faker.person.fullName(),
+      email: faker.internet.email(),
+      dateStarted: faker.date.past(),
+      jobTitle: faker.company.buzzAdjective(),
+    })
   }
-}
-
-const DisplayName = () => {
-  const { user, dispatch } = useAppStateContext()
-
-  function editName() {
-    const newName = prompt('Please provide name you would like to change')
-
-    if (newName?.trim()) {
-      dispatch({
-        type: ACTION_TYPES['user/nameChanged'],
-        payload: newName.trim(),
-      })
-    }
-  }
-
-  return user ? (
-    <div className="flex gap-2 items-center">
-      <span>Welcome back, {user.name.split(' ')[0]}!</span>
-      <button
-        className="scale-150 text-blue-700 hover:bg-slate-800 p-1 rounded-md"
-        type="button"
-        onClick={editName}
-      >
-        ✏
-      </button>
-    </div>
-  ) : (
-    <div></div>
-  )
-}
-
-const Button = ({ action, text }: { action: Action; text: string }) => {
-  const { dispatch } = useAppStateContext()
-
-  return (
-    <button
-      className="block text-white bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-sm transition-colors"
-      type="button"
-      onClick={() => dispatch(action)}
-    >
-      {text}
-    </button>
-  )
+  return arr
 }
 
 const Header = () => {
-  const { user } = useAppStateContext()
-
   return (
     <header className="p-6 border-b-2 border-solid border-gray-700 text-white flex justify-between items-center">
-      <DisplayName />
-      {user ? (
-        <Button
-          text="Logout"
-          action={{
-            type: ACTION_TYPES.logout,
-          }}
-        />
-      ) : (
-        <Button
-          text="Login"
-          action={{
-            type: ACTION_TYPES.login,
-            payload: changeUser(),
-          }}
-        />
-      )}
+      Super Sort 5000
     </header>
   )
 }
 
-const hackStyle = {
-  flex: '1 0 calc(33.333% - 1rem)',
+const Filter = () => {
+  const { dispatch, filter } = useGridApiContext()
+
+  return (
+    <input
+      className="text-black"
+      type="text"
+      value={filter}
+      onChange={e => dispatch({ type: ACTION_TYPES.filter, payload: e.target.value })}
+    />
+  )
 }
 
-const Component = ({ text }: { text: string }) => {
-  const { user } = useAppStateContext()
+const Sort = () => {
+  const { dispatch, sortSelection } = useGridApiContext()
 
-  if (!user) {
+  return (
+    <select
+      className="text-black"
+      value={sortSelection}
+      onChange={e => dispatch({ type: ACTION_TYPES.sort, payload: e.target.value as SortTypes })}
+    >
+      <option value="">Sort</option>
+      <option value="asc">Ascending</option>
+      <option value="desc">Descending</option>
+    </select>
+  )
+}
+
+const Pagination = ({ numItems }: { numItems: number }) => {
+  const { dispatch, currentPage, recordsPerPage } = useGridApiContext()
+  const totalPages = Math.ceil(numItems / recordsPerPage)
+
+  function previous() {
+    // put in reducer
+    if (currentPage > 1) {
+      dispatch({ type: ACTION_TYPES.paginate, payload: currentPage - 1 })
+    }
+  }
+
+  function next() {
+    // put in reducer
+    if (currentPage < totalPages) {
+      dispatch({ type: ACTION_TYPES.paginate, payload: currentPage + 1 })
+    }
+  }
+
+  if (totalPages <= 1) {
     return null
   }
 
   return (
-    <div
-      className="block p-6 border-solid border-gray-600 bg-slate-950 rounded-md text-white"
-      style={hackStyle}
-    >
-      <h2>{user.name}</h2>
-      <p>{user.email}</p>
-      <p className="mt-6 ">{text}</p>
+    <div className="py-4">
+      <button type="button" onClick={previous}>
+        Previous
+      </button>
+      <span className="px-4">
+        {currentPage} of {totalPages}
+      </span>
+      <button type="button" onClick={next}>
+        Next
+      </button>
     </div>
   )
 }
 
-const AnotherComponent = ({ text }: { text: string }) => {
-  const { user } = useAppStateContext()
+const Table = ({ items }: { items: Employee[] }) => {
+  return (
+    <table className={'min-w-96'}>
+      <thead>
+        <tr>
+          <th>name</th>
+          <th>email</th>
+          <th>jobTitle</th>
+          <th>date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((r, idx) => (
+          <tr key={idx}>
+            <td>{r.name}</td>
+            <td>{r.email}</td>
+            <td>{r.jobTitle}</td>
+            <td>{r.dateStarted.toLocaleDateString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
 
-  if (!user) {
-    return null
-  }
+const NoResults = () => {
+  const { dispatch, filter } = useGridApiContext()
 
   return (
-    <div
-      className="block p-4 border-solid border-gray-600 bg-slate-950 rounded-md  text-white"
-      style={hackStyle}
-    >
-      <h2>{user.name}</h2>
-      <p className="mt-6 ">{text}</p>
-    </div>
+    <h1 className="py-6 text-xl">
+      There are no results that match "{filter}"{' '}
+      <button type="button" onClick={() => dispatch({ type: ACTION_TYPES.filter, payload: '' })}>
+        ✖
+      </button>
+    </h1>
   )
 }
 
-const Main = ({ children }: { children: ReactNode }) => {
-  return <main className={'min-w-96 mx-auto p-6 flex gap-4 flex-wrap'}>{children}</main>
+const GridApi = ({ children }: { children: ReactNode }) => {
+  return <div>{children}</div>
+}
+
+const sortMethods: { [k: string]: (a: Employee, b: Employee) => number } = {
+  '': () => 0,
+  asc: (a: Employee, b: Employee) => a.name.localeCompare(b.name),
+  desc: (a: Employee, b: Employee) => b.name.localeCompare(a.name),
+}
+
+const Main = () => {
+  const { dispatch } = useGridApiContext()
+  const { records, currentPage, recordsPerPage, filter, sortSelection } = useGridApiContext()
+
+  const items = records
+    .filter(r => r.name.toLowerCase().includes(filter.toLowerCase()))
+    .sort(sortMethods[sortSelection])
+
+  const dataToRender = items.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage)
+
+  useEffect(() => {
+    dispatch({ type: ACTION_TYPES.onload, payload: getEmployees() })
+  }, [])
+
+  return (
+    <main className={'min-w-96 mx-auto p-6 flex gap-4 flex-wrap'}>
+      <GridApi>
+        <Filter />
+        <Sort />
+        {items.length > 0 ? <Table items={dataToRender} /> : <NoResults />}
+        <Pagination numItems={items.length} />
+      </GridApi>
+    </main>
+  )
 }
 
 const App = () => {
   return (
-    <AppStateProvider>
+    <GridApiProvider>
       <div className="app w-[1024px] mx-auto">
         <Header />
-        <Main>
-          <Component text={faker.lorem.paragraph({ min: 1, max: 3 })} />
-          <AnotherComponent text={faker.lorem.paragraph({ min: 2, max: 3 })} />
-          <Component text={faker.lorem.paragraph({ min: 1, max: 3 })} />
-          <AnotherComponent text={faker.lorem.paragraph({ min: 2, max: 3 })} />
-          <Component text={faker.lorem.paragraph({ min: 1, max: 3 })} />
-          <AnotherComponent text={faker.lorem.paragraph({ min: 2, max: 3 })} />
-          <Component text={faker.lorem.paragraph({ min: 1, max: 3 })} />
-          <AnotherComponent text={faker.lorem.paragraph({ min: 2, max: 3 })} />
-          <Component text={faker.lorem.paragraph({ min: 1, max: 3 })} />
-          <AnotherComponent text={faker.lorem.paragraph({ min: 2, max: 3 })} />
-        </Main>
+        <Main />
       </div>
-    </AppStateProvider>
+    </GridApiProvider>
   )
 }
 

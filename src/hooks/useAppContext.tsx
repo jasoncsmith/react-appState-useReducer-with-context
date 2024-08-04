@@ -1,68 +1,93 @@
 import { createContext, Dispatch, ReactNode, Reducer, useContext, useReducer } from 'react'
 
 enum ACTION_TYPES {
-  login = 'login',
-  logout = 'logout',
-  'user/nameChanged' = 'user/nameChanged',
+  'paginate' = 'paginate',
+  'sort' = 'sort',
+  'filter' = 'filter',
+  'onload' = 'onload',
 }
 
-interface User {
+type SortTypes = 'asc' | 'desc' | ''
+
+interface Employee {
   name: string
   email: string
+  jobTitle: string
+  dateStarted: Date
 }
 
 interface State {
-  user: User | null
+  records: Employee[]
+  currentPage: number
+  filter: string
+  sortSelection: SortTypes
+  recordsPerPage: number
   dispatch: Dispatch<Action>
 }
 
-interface ActionLogin {
-  type: typeof ACTION_TYPES.login
-  payload: User
+interface ActionPaginate {
+  type: typeof ACTION_TYPES.paginate
+  payload: number
 }
 
-interface ActionChangeUserName {
-  type: (typeof ACTION_TYPES)['user/nameChanged']
+interface ActionSort {
+  type: typeof ACTION_TYPES.sort
+  payload: SortTypes
+}
+
+interface ActionFilter {
+  type: typeof ACTION_TYPES.filter
   payload: string
 }
 
-interface ActionLogout {
-  type: typeof ACTION_TYPES.logout
+interface ActionOnload {
+  type: typeof ACTION_TYPES.onload
+  payload: Employee[]
 }
 
-type Action = ActionLogin | ActionLogout | ActionChangeUserName
+type Action = ActionFilter | ActionSort | ActionPaginate | ActionOnload
 
-const AppStateContext = createContext<null | State>(null)
+const GridApiContext = createContext<null | State>(null)
 
 const initialState: State = {
-  user: null,
+  records: [],
+  currentPage: 1,
+  filter: '',
+  sortSelection: '',
+  recordsPerPage: 5,
   dispatch: () => {},
 }
 
 function stateReducer(state: State, action: Action) {
-  if (action.type === ACTION_TYPES.login) {
-    return { ...state, user: { ...action.payload } }
+  const { type, payload } = action
+
+  if (type === ACTION_TYPES.paginate) {
+    return { ...state, currentPage: payload }
   }
 
-  if (action.type === ACTION_TYPES.logout) {
-    return { ...state, user: null }
+  if (type === ACTION_TYPES.sort) {
+    return { ...state, sortSelection: payload }
   }
 
-  if (action.type === ACTION_TYPES['user/nameChanged']) {
-    return state.user ? { ...state, user: { ...state.user, name: action.payload } } : state
+  if (type === ACTION_TYPES.filter) {
+    return { ...state, filter: payload }
+  }
+
+  if (type === ACTION_TYPES.onload) {
+    return { ...state, records: [...payload] }
   }
 
   return state
 }
 
-const AppStateProvider = ({ children }: { children: ReactNode }) => {
+const GridApiProvider = ({ children }: { children: ReactNode }) => {
   const [appState, dispatch] = useReducer<Reducer<State, Action>>(stateReducer, initialState)
 
-  return <AppStateContext.Provider value={{ ...appState, dispatch }}>{children}</AppStateContext.Provider>
+  return <GridApiContext.Provider value={{ ...appState, dispatch }}>{children}</GridApiContext.Provider>
 }
 
-const useAppStateContext = () => {
-  const state = useContext(AppStateContext)
+const useGridApiContext = () => {
+  const state = useContext(GridApiContext)
 
   if (!state) {
     throw new Error('state must be consumed within provider')
@@ -71,5 +96,5 @@ const useAppStateContext = () => {
   return state
 }
 
-export type { Action }
-export { useAppStateContext, AppStateProvider, ACTION_TYPES }
+export type { Action, Employee, SortTypes }
+export { useGridApiContext, GridApiProvider, ACTION_TYPES }
