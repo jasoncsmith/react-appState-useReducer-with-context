@@ -5,3 +5,4 @@ Why can't things be simple. I think `useReducer` with `createContext` can handle
 This example app sets up the scaffolding for managing app state with `useReducer` and `createContext`.
 
 What are your thoughts?
+"# react-paginate-sort-filter" 
